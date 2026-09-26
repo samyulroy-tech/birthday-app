@@ -1,3 +1,4 @@
+
 from datetime import datetime
 from typing import Optional
 
@@ -76,8 +77,12 @@ class BalloonBase(BaseModel):
     order_index: int = 0
 
 
-class BalloonCreate(BalloonBase):
-    pass
+# Create request
+# order_index is intentionally NOT included because
+# the backend calculates it automatically.
+class BalloonCreate(BaseModel):
+    message: str
+    enabled: bool = True
 
 
 class BalloonUpdate(BaseModel):
