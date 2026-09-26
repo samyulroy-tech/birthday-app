@@ -1,0 +1,68 @@
+services:
+  # =========================
+  # FastAPI Backend
+  # =========================
+  - type: web
+    name: birthday-backend
+    runtime: python
+    rootDir: backend
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    healthCheckPath: /docs
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: birthday-db
+          property: connectionString
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: ADMIN_USERNAME
+        sync: false
+
+      - key: ADMIN_PASSWORD
+        sync: false
+
+      - key: CORS_ORIGINS
+        sync: false
+
+      - key: UPLOAD_DIR
+        value: ./uploads
+
+      - key: MAX_UPLOAD_MB
+        value: "80"
+
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        sync: false
+
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+
+
+  # =========================
+  # Next.js Frontend
+  # =========================
+  - type: web
+    name: birthday-frontend
+    runtime: node
+    rootDir: frontend
+
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+
+
+# =========================
+# PostgreSQL
+# =========================
+databases:
+  - name: birthday-db
+    databaseName: birthday_surprise
+    user: birthday
