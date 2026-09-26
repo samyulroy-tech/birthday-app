@@ -3,7 +3,9 @@
 import { useRef, useState } from "react";
 
 import { AdminConfig, MediaItem } from "@/lib/types";
+
 import { adminApi } from "@/lib/api";
+
 import { MediaVisual } from "@/components/MediaFrame";
 
 interface MediaPanelProps {
@@ -21,10 +23,13 @@ export function MediaPanel({
 }: MediaPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Added only for replacing an existing media file
+  const replaceFileRef = useRef<HTMLInputElement>(null);
+  const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
+
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [uploadError, setUploadError] = useState("");
-
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
@@ -93,6 +98,93 @@ export function MediaPanel({
     }
   }
 
+  // ============================================================
+  // CHANGE / RE-UPLOAD EXISTING PHOTO OR VIDEO
+  // ============================================================
+  async function replaceMedia(item: MediaItem, file: File) {
+    if (busyId === item.id) return;
+
+    setBusyId(item.id);
+    setActionError("");
+    setUploadError("");
+    setUploadProgress(`Replacing "${item.title || "memory"}"...`);
+
+    try {
+      // Upload the new physical file first
+      const uploaded = await adminApi.upload(file);
+
+      // Update ONLY the file-related fields.
+      // Everything else remains unchanged.
+      const updated = await adminApi.updateMedia(item.id, {
+        media_type: uploaded.media_type,
+        url: uploaded.url,
+        thumbnail_url: uploaded.thumbnail_url,
+      });
+
+      // Update same item in frontend state
+      onItemsChange(
+        items.map((media) =>
+          media.id === item.id ? updated : media
+        )
+      );
+
+      setUploadProgress("");
+    } catch (error) {
+      console.error("Failed to replace media:", error);
+
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Couldn't replace this photo."
+      );
+    } finally {
+      setBusyId(null);
+      setUploadProgress("");
+
+      if (replaceFileRef.current) {
+        replaceFileRef.current.value = "";
+      }
+
+      setReplaceTargetId(null);
+    }
+  }
+
+  function openReplacePicker(itemId: string) {
+    if (busyId) return;
+
+    setReplaceTargetId(itemId);
+
+    // Open the hidden file picker
+    setTimeout(() => {
+      replaceFileRef.current?.click();
+    }, 0);
+  }
+
+  async function handleReplaceFile(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file || !replaceTargetId) {
+      event.target.value = "";
+      return;
+    }
+
+    const item = items.find(
+      (media) => media.id === replaceTargetId
+    );
+
+    if (!item) {
+      event.target.value = "";
+      setReplaceTargetId(null);
+      return;
+    }
+
+    await replaceMedia(item, file);
+
+    event.target.value = "";
+  }
+
   async function update(
     id: string,
     patch: Partial<MediaItem>
@@ -126,7 +218,9 @@ export function MediaPanel({
   async function remove(id: string) {
     if (busyId === id) return;
 
-    const item = items.find((media) => media.id === id);
+    const item = items.find(
+      (media) => media.id === id
+    );
 
     if (
       !window.confirm(
@@ -169,7 +263,10 @@ export function MediaPanel({
     }
   }
 
-  async function move(id: string, direction: -1 | 1) {
+  async function move(
+    id: string,
+    direction: -1 | 1
+  ) {
     if (busyId) return;
 
     const index = items.findIndex(
@@ -273,6 +370,15 @@ export function MediaPanel({
             }
           />
 
+          {/* Hidden input ONLY for Change Photo */}
+          <input
+            ref={replaceFileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+            hidden
+            onChange={handleReplaceFile}
+          />
+
           <span className="text-xs text-white/40">
             JPG, PNG, WebP, GIF, MP4, WebM, MOV — up to
             80MB each
@@ -312,6 +418,7 @@ export function MediaPanel({
       <div className="grid gap-4">
         {items.map((item, index) => {
           const busy = busyId === item.id;
+
           const isSpecial =
             config.special_media_id === item.id;
 
@@ -545,6 +652,19 @@ export function MediaPanel({
                     title="Move down"
                   >
                     ↓
+                  </button>
+
+                  {/* CHANGE PHOTO / RE-UPLOAD */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openReplacePicker(item.id)
+                    }
+                    disabled={busy}
+                    className="min-h-[38px] rounded-xl border border-[#f4c97a]/30 bg-[#f4c97a]/10 px-3 text-sm text-[#f4c97a] transition-all duration-200 hover:border-[#f4c97a]/50 hover:bg-[#f4c97a]/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                    title="Change photo or video"
+                  >
+                    {busy ? "..." : "Change Photo"}
                   </button>
 
                   <button
