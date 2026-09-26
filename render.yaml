@@ -1,35 +1,48 @@
 services:
-  # =========================
-  # FastAPI Backend
-  # =========================
+
+  # ========================================
+  # FASTAPI BACKEND
+  # ========================================
   - type: web
     name: birthday-backend
     runtime: python
     rootDir: backend
-
     plan: free
 
     buildCommand: pip install -r requirements.txt
+
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
     healthCheckPath: /docs
 
     envVars:
-      - key: DATABASE_URL
-        sync: false
 
+      # Python
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+
+      # PostgreSQL - automatically connected
+      - key: DATABASE_URL
+        fromDatabase:
+          name: birthday-db
+          property: connectionString
+
+      # JWT
       - key: JWT_SECRET
         generateValue: true
 
+      # Frontend CORS
       - key: CORS_ORIGINS
         sync: false
 
+      # Uploads
       - key: UPLOAD_DIR
-        value: ./uploads
+        value: "./uploads"
 
       - key: MAX_UPLOAD_MB
         value: "80"
 
+      # Admin bootstrap
       - key: BOOTSTRAP_ADMIN_USERNAME
         sync: false
 
@@ -37,19 +50,32 @@ services:
         sync: false
 
 
-  # =========================
-  # Next.js Frontend
-  # =========================
+  # ========================================
+  # NEXT.JS FRONTEND
+  # ========================================
   - type: web
     name: birthday-frontend
     runtime: node
     rootDir: frontend
-
     plan: free
 
     buildCommand: npm ci && npm run build
+
     startCommand: npm start
 
     envVars:
+
+      # Automatically entered during Blueprint setup
       - key: NEXT_PUBLIC_API_URL
         sync: false
+
+
+# ========================================
+# POSTGRESQL
+# ========================================
+databases:
+
+  - name: birthday-db
+    plan: free
+    databaseName: birthday_surprise
+    user: birthday
