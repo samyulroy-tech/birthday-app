@@ -86,7 +86,7 @@ export function FinaleScene({ items, subtitle }: { items: MediaItem[]; subtitle:
 
       <div className="relative z-[3] h-full flex flex-col items-center justify-center text-center px-6" style={{ textShadow: "0 0 30px #000" }}>
         <h1 className="font-display italic font-medium leading-[1.05] text-[clamp(24px,5.4vw,52px)]">
-          <RevealWords text="Happy Birthday, Sis ❤️" stagger={0.5} delay={n * 0.06 + 1.4} />
+          <RevealWords text="Happy Birthday, My Motman ❤️" stagger={0.5} delay={n * 0.06 + 1.4} />
         </h1>
         <motion.p
           initial={{ opacity: 0 }}
